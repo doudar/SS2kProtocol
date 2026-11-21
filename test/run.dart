@@ -114,6 +114,7 @@ void main() {
       } else {
         final kind = p.ReplyKind.values.byName(v['kind']);
         packet = p.decodeResponse(bytes, kind: kind);
+        check(packet.status == bytes[0], 'Dart decoder changed wire status');
       }
     } on FormatException {
       valid = false;
