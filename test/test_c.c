@@ -28,7 +28,8 @@ int main(int argc, char **argv) {
       ss2k_reply_kind kind = strcmp(argv[1],"read") == 0 ? SS2K_REPLY_READ : strcmp(argv[1],"write") == 0 ? SS2K_REPLY_WRITE : SS2K_NOTIFICATION;
       result = ss2k_decode_response(bytes,n,kind,0,&view);
       if (result == SS2K_OK || result == SS2K_REMOTE_ERROR) {
-        assert(ss2k_encode_response(bytes[0],bytes[1],kind,bytes+2,n-2,out,sizeof(out),&written) == SS2K_OK);
+        assert(view.status == bytes[0]);
+        assert(ss2k_encode_response(view.status,bytes[1],kind,bytes+2,n-2,out,sizeof(out),&written) == SS2K_OK);
         assert(written == n && memcmp(bytes,out,n) == 0);
       }
     }
@@ -70,6 +71,8 @@ int main(int argc, char **argv) {
   assert(ss2k_decode_response(bytes,4,SS2K_REPLY_WRITE,1,&view)==SS2K_OK && view.payload_length==1);
   assert(ss2k_decode_response(bytes,4,SS2K_REPLY_READ,1,&view)==SS2K_INVALID);
   assert(ss2k_decode_response(bytes,4,(ss2k_reply_kind)99,1,&view)==SS2K_INVALID);
+  assert(ss2k_encode_response(SS2K_SECURE_NOTIFICATION,0x35,SS2K_REPLY_READ,bytes,2,out,sizeof(out),&written)==SS2K_INVALID && written==0);
+  assert(ss2k_encode_response(SS2K_SECURE_NOTIFICATION,0x35,SS2K_REPLY_WRITE,bytes,2,out,sizeof(out),&written)==SS2K_INVALID && written==0);
   /* All raw scalar boundaries round-trip through the actual compiled codec. */
   {
     unsigned id;
