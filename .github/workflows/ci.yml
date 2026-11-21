@@ -15,8 +15,11 @@ jobs:
         with:
           sdk: '3.12.2'
       - run: dart tool/generate.dart --check
+      - run: dart pub get
       - run: dart --suppress-analytics analyze lib tool test examples
       - run: dart test/run.dart
+      - run: python -m pip install cryptography
+      - run: dart test/secure_test.dart
       - name: Preserve existing wire contracts
         if: github.event_name == 'pull_request'
         env:

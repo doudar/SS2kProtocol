@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "version": "0.1.0",
+  "version": "0.2.0",
   "service_uuid": "77776277-7877-7774-4466-896665500000",
   "characteristic_uuid": "77776277-7877-7774-4466-896665500001",
   "operations": {
@@ -36,7 +36,33 @@
     "gear_ratio_scale": 1000,
     "gear_min_ratio": 500,
     "gear_max_ratio": 6000,
-    "gear_max_tooth": 99
+    "gear_max_tooth": 99,
+    "capabilities_version": 1,
+    "cap_password_write_only": 1,
+    "cap_secure_settings": 2,
+    "secure_info": 160,
+    "secure_identity": 161,
+    "secure_pair": 162,
+    "secure_offer": 163,
+    "secure_confirm": 164,
+    "secure_paired": 165,
+    "secure_error": 175,
+    "secure_resume": 176,
+    "secure_challenge": 177,
+    "secure_prove": 178,
+    "secure_ready": 179,
+    "secure_data": 208,
+    "secure_fragment": 240,
+    "secure_max_inner": 512,
+    "secure_tag_size": 8,
+    "secure_overhead": 13,
+    "secure_max_wire": 525,
+    "secure_fragment_header": 3,
+    "ota_begin": 0,
+    "ota_chunk": 1,
+    "ota_finish": 2,
+    "ota_abort": 3,
+    "secure_notification": 129
   },
   "transport_notes": [
     "Requests are [operation, command ID, payload]. Responses/notifications are [status, command ID, payload]. All multi-byte integers are little-endian; signed integers use two's complement.",
@@ -50,7 +76,9 @@
     "Snapshot header: status@0, ID@1, version u8@2, chunk u16@3, count u16@5, JSON bytes@7. Count >0, chunk<count. Snapshot transfer blocks other BLE commands and expires after 5000 ms without progress.",
     "Scan header: status@0, ID@1, version u8@2, event u8@3, scan ID u16@4, sequence u16@6, fragment u8@8, count u8@9, body@10. Count >0, fragment<count. Begin/end carry no body. Device body is [UUID length u8, UUID UTF-8, name UTF-8].",
     "This manifest version identifies the library, not a newly negotiated on-wire version. Existing IDs, UUIDs and layouts are preserved. Unknown IDs fail locally; older devices can return FF for newer commands.",
-    "App metadata contains presentation defaults/ranges from the companion app, not firmware-enforced limits or board-dependent factory defaults. Wire validity and application policy are separate."
+    "App metadata contains presentation defaults/ranges from the companion app, not firmware-enforced limits or board-dependent factory defaults. Wire validity and application policy are separate.",
+    "With capability bit 1, only capabilities and secure v1 discovery/handshake frames are public. All settings, updates, logs and firmware operations travel inside authenticated secure records. See docs/secure.md for the handshake, replay rules and transport framing.",
+    "Inside a secure record, status 0x81 marks an unsolicited setting change, scan event or log. It never acknowledges a write or read. Request-bound snapshot chunks carry success 0x80. Shifter writes receive an explicit command acknowledgement."
   ],
   "commands": [
     {
@@ -59,7 +87,7 @@
       "legacy_name": "BLE_firmwareUpdateURL",
       "legacy_format": "CustomString",
       "description": "Firmware Update URL",
-      "status": "active",
+      "status": "deprecated",
       "read_request": "empty",
       "read_response": "string",
       "write_request": "string",
@@ -70,19 +98,8 @@
       "unit": null,
       "snapshot_key": "firmwareUpdateURL",
       "sensitive": false,
-      "notes": "",
-      "app": {
-        "vName": "BLE_firmwareUpdateURL",
-        "isSetting": false,
-        "settingType": "network",
-        "type": "string",
-        "humanReadableName": "Firmware Update URL",
-        "min": 0,
-        "max": 0,
-        "textDescription": "URL for firmware updates.",
-        "defaultData": "https://raw.githubusercontent.com/doudar/OTAUpdates/main/",
-        "order": 12
-      }
+      "notes": "Legacy firmware only. Permanently retired on current devices.",
+      "app": null
     },
     {
       "id": 2,
@@ -566,19 +583,8 @@
       "unit": null,
       "snapshot_key": "autoUpdate",
       "sensitive": false,
-      "notes": "Deprecated compatibility field. Writes are accepted but current firmware keeps automatic updates disabled. A write echo is not proof of the stored value.",
-      "app": {
-        "vName": "BLE_autoUpdate",
-        "isSetting": false,
-        "settingType": "network",
-        "type": "bool",
-        "humanReadableName": "Auto Updates",
-        "min": 0,
-        "max": 1,
-        "textDescription": "Deprecated compatibility setting. Current firmware always disables automatic updates.",
-        "defaultData": "false",
-        "order": 28
-      }
+      "notes": "Legacy firmware only. Permanently retired on current devices.",
+      "app": null
     },
     {
       "id": 18,
@@ -628,7 +634,7 @@
       "unit": null,
       "snapshot_key": "password",
       "sensitive": true,
-      "notes": "",
+      "notes": "On devices advertising password-write-only capability, reads and successful writes return empty data. Empty writes preserve the stored secret. Earlier devices can return the stored value.",
       "app": {
         "vName": "BLE_password",
         "isSetting": true,
@@ -1553,7 +1559,7 @@
       "unit": null,
       "snapshot_key": null,
       "sensitive": true,
-      "notes": "Read-only user-config JSON snapshot, not every runtime measurement. Reassemble UTF-8 bytes before parsing JSON. Unknown JSON keys must be ignored. Includes Wi-Fi password. Retry from the start after disconnect, missing chunks or inconsistent framing.",
+      "notes": "Read-only user-config JSON snapshot, not every runtime measurement. Reassemble UTF-8 bytes before parsing JSON. Unknown JSON keys must be ignored. The password field is empty when the device supports password-write-only capability. Retry from the start after disconnect, missing chunks or inconsistent framing.",
       "app": null
     },
     {
@@ -1637,6 +1643,66 @@
         "defaultData": "0",
         "order": 7
       }
+    },
+    {
+      "id": 54,
+      "name": "capabilities",
+      "legacy_name": "BLE_capabilities",
+      "legacy_format": "CustomCapabilities",
+      "description": "Public protocol capabilities. Version byte and LE32 bits. Bit 0 makes WiFi password write-only. Bit 1 requires secure settings and firmware streaming.",
+      "status": "active",
+      "read_request": "empty",
+      "read_response": "capabilities",
+      "write_request": null,
+      "write_response": null,
+      "notification": null,
+      "write_completion": null,
+      "scale": 1,
+      "unit": null,
+      "snapshot_key": null,
+      "sensitive": false,
+      "notes": "Public protocol capabilities. Version byte and LE32 bits. Bit 0 makes WiFi password write-only. Bit 1 requires secure settings and firmware streaming.",
+      "app": null
+    },
+    {
+      "id": 55,
+      "name": "forgetPeer",
+      "legacy_name": "BLE_forgetPeer",
+      "legacy_format": "CustomAction",
+      "description": "Inside an authenticated session, forget the requesting application and invalidate all sessions for that pairing.",
+      "status": "active",
+      "read_request": null,
+      "read_response": null,
+      "write_request": "empty",
+      "write_response": "empty",
+      "notification": null,
+      "write_completion": "response",
+      "scale": 1,
+      "unit": null,
+      "snapshot_key": null,
+      "sensitive": false,
+      "notes": "Inside an authenticated session, forget the requesting application and invalidate all sessions for that pairing.",
+      "app": null
+    },
+    {
+      "id": 56,
+      "name": "firmwareStream",
+      "legacy_name": "BLE_firmwareStream",
+      "legacy_format": "CustomFirmwareStream",
+      "description": "Authenticated application image stream. Begin carries size LE32 and binary SHA256, chunk carries offset LE32 and bytes, finish and abort have no fields. Reply carries the operation and next offset LE32.",
+      "status": "active",
+      "read_request": null,
+      "read_response": null,
+      "write_request": "ota_request",
+      "write_response": "ota_reply",
+      "notification": null,
+      "write_completion": "response",
+      "scale": 1,
+      "unit": null,
+      "snapshot_key": null,
+      "sensitive": false,
+      "notes": "Authenticated application image stream. Begin carries size LE32 and binary SHA256, chunk carries offset LE32 and bytes, finish and abort have no fields. Reply carries the operation and next offset LE32.",
+      "app": null
     }
   ]
 }

@@ -51,6 +51,17 @@ static int valid_payload(ss2k_format format, const uint8_t *p, size_t n, int req
   size_t i, j;
   if (n && !p) return 0;
   switch (format) {
+    case SS2K_FORMAT_CAPABILITIES: return n == 5 && p[0] == SS2K_CAPABILITIES_VERSION;
+    case SS2K_FORMAT_OTA_REQUEST:
+      if (!n) return 0;
+      switch (p[0]) {
+        case SS2K_OTA_BEGIN: return n == 37 && (p[1] | p[2] | p[3] | p[4]);
+        case SS2K_OTA_CHUNK: return n > 5 && n <= SS2K_SECURE_MAX_INNER - 2;
+        case SS2K_OTA_FINISH:
+        case SS2K_OTA_ABORT: return n == 1;
+        default: return 0;
+      }
+    case SS2K_FORMAT_OTA_REPLY: return n == 5 && p[0] <= SS2K_OTA_ABORT;
     case SS2K_FORMAT_EMPTY: return n == 0;
     case SS2K_FORMAT_BOOL: return n == 1 && (!request || p[0] <= 1);
     case SS2K_FORMAT_U16:

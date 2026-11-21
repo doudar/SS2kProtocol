@@ -1,4 +1,5 @@
 #include "ss2k_protocol.h"
+#include "ss2k_secure.h"
 #include "CustomCharacteristicProtocol.h"
 #include <assert.h>
 #include <inttypes.h>
@@ -35,6 +36,20 @@ int main(int argc, char **argv) {
     if (result == SS2K_REMOTE_ERROR) printf(" error");
     else if (strcmp(argv[1],"request") != 0 && result == SS2K_OK && ss2k_decode_scalar(&view,&value)==SS2K_OK) printf(" %" PRId64,value);
     puts(""); return 0;
+  }
+  {
+    ss2k_fragment_state state = {0,0};
+    uint8_t head[] = {0xf0,1,0,0xd0,1}, tail[] = {0xf0,2,1,2};
+    uint8_t nested[] = {0xf0,3,0,0xf0};
+    const uint8_t *record;
+    assert(ss2k_secure_accept(&state,bytes,3,head,sizeof(head),&record,&n)==SS2K_FRAME_PENDING);
+    assert(ss2k_secure_accept(&state,bytes,3,tail,sizeof(tail),&record,&n)==SS2K_FRAME_COMPLETE);
+    assert(n==3 && record==bytes && record[0]==0xd0 && record[2]==2);
+    assert(ss2k_secure_accept(&state,bytes,3,tail,sizeof(tail),&record,&n)==SS2K_FRAME_INVALID);
+    assert(ss2k_secure_accept(&state,bytes,2,head,sizeof(head),&record,&n)==SS2K_FRAME_PENDING);
+    assert(ss2k_secure_accept(&state,bytes,2,tail,sizeof(tail),&record,&n)==SS2K_FRAME_INVALID);
+    assert(ss2k_secure_accept(&state,bytes,2,nested,sizeof(nested),&record,&n)==SS2K_FRAME_INVALID);
+    assert(ss2k_secure_accept(&state,NULL,0,head+3,2,&record,&n)==SS2K_FRAME_COMPLETE && record==head+3 && n==2);
   }
   assert(ss2k_find(0x33)==NULL && ss2k_find(0)==NULL && ss2k_find(255)==NULL);
   assert(customCharacteristicValueFormat(BLE_hMin)==CustomSigned32);

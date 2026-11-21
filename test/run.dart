@@ -320,7 +320,7 @@ void main() {
   final added = clone();
   final newCommand = Map<String, dynamic>.from(added['commands'][2]);
   newCommand.addAll({
-    'id': 54,
+    'id': 57,
     'name': 'exampleNewCommand',
     'legacy_name': 'BLE_exampleNewCommand',
     'app': null,

@@ -17,6 +17,9 @@ const formatNames = [
   'gear_reply',
   'snapshot',
   'scan',
+  'capabilities',
+  'ota_request',
+  'ota_reply',
 ];
 const legacyNames = [
   'CustomAction',
@@ -30,6 +33,8 @@ const legacyNames = [
   'CustomScanResultStream',
   'CustomBooleanWriteStringRead',
   'CustomGearTeeth',
+  'CustomCapabilities',
+  'CustomFirmwareStream',
   'CustomUnknown',
 ];
 String upper(String s) => s
@@ -51,8 +56,7 @@ void validate(Map<String, dynamic> s) {
   for (final key in ['service_uuid', 'characteristic_uuid']) {
     if (!RegExp(
       r'^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$',
-    ).hasMatch(s[key] as String))
-      invalid('Invalid $key');
+    ).hasMatch(s[key] as String)) invalid('Invalid $key');
   }
   if (s['byte_order'] != 'little') invalid('Only little endian is supported');
   final op = (s['operations'] as Map).values.toList();
@@ -76,8 +80,7 @@ void validate(Map<String, dynamic> s) {
     if (id is! int || id < 1 || id > 255 || !ids.add(id))
       invalid('Duplicate/invalid/reserved command ID: $id');
     if (!RegExp(r'^[A-Za-z][A-Za-z0-9_]*$').hasMatch(c['name']) ||
-        !names.add(c['name']))
-      invalid('Invalid/duplicate name');
+        !names.add(c['name'])) invalid('Invalid/duplicate name');
     if (!cNames.add(upper(c['name'])))
       invalid('Command names collide after C normalization');
     if (c['legacy_name'] != 'BLE_${c['name']}' ||
@@ -111,6 +114,8 @@ void validate(Map<String, dynamic> s) {
     if (c['app'] != null && !orders.add(c['app']['order']))
       invalid('Duplicate app order');
     final shape = <String, List<String>>{
+      'CustomCapabilities': ['capabilities', 'none', 'none'],
+      'CustomFirmwareStream': ['none', 'ota_request', 'ota_reply'],
       'CustomAction': ['none', 'empty', 'empty'],
       'CustomBoolean': ['bool', 'bool', 'bool'],
       'CustomUnsigned16': ['u16', 'u16', 'u16'],
@@ -133,8 +138,8 @@ void validate(Map<String, dynamic> s) {
       final expected = c['read_response'] == 'power_table'
           ? 'row_index'
           : c['read_response'] == 'gear_reply'
-          ? 'gear_index'
-          : 'empty';
+              ? 'gear_index'
+              : 'empty';
       if (c['read_request'] != expected)
         invalid('Read selector disagrees with response format');
     }
@@ -148,8 +153,7 @@ void validate(Map<String, dynamic> s) {
   final k = s['constants'] as Map;
   for (final entry in k.entries) {
     if (!RegExp(r'^[a-z][a-z0-9_]*$').hasMatch(entry.key) ||
-        entry.value is! int)
-      invalid('Invalid constant');
+        entry.value is! int) invalid('Invalid constant');
   }
   // These are versioned layouts implemented by the runtime. Changes require a codec update.
   if (k['snapshot_header_length'] != 7 || k['scan_header_length'] != 10)
@@ -159,8 +163,7 @@ void validate(Map<String, dynamic> s) {
       k['power_table_columns'] < 1 ||
       k['power_table_columns'] > 255 ||
       k['gear_max_count'] < 2 ||
-      k['gear_max_count'] > 255)
-    invalid('Invalid array limits');
+      k['gear_max_count'] > 255) invalid('Invalid array limits');
   for (final name in ['snapshot_version', 'scan_version']) {
     if (k[name] < 1 || k[name] > 255) invalid('Invalid framing version');
   }
@@ -206,7 +209,13 @@ Map<String, String> render(Map<String, dynamic> s) {
   final table = StringBuffer('/* GENERATED. DO NOT EDIT. */\n');
   for (final c in commands) {
     table.writeln(
-      '  {${c['id']}, ${['read_request', 'read_response', 'write_request', 'write_response', 'notification'].map((f) => cf(c[f])).join(', ')}, ${c['scale']}, ${c['write_completion'] == 'notification' ? 1 : 0}},',
+      '  {${c['id']}, ${[
+        'read_request',
+        'read_response',
+        'write_request',
+        'write_response',
+        'notification'
+      ].map((f) => cf(c[f])).join(', ')}, ${c['scale']}, ${c['write_completion'] == 'notification' ? 1 : 0}},',
     );
   }
   final compat = StringBuffer(
@@ -224,9 +233,12 @@ Map<String, String> render(Map<String, dynamic> s) {
     );
   }
   compat.writeln(
+      '#define CUSTOM_CAPABILITIES_VERSION SS2K_CAPABILITIES_VERSION\n#define CUSTOM_CAPABILITY_PASSWORD_WRITE_ONLY SS2K_CAP_PASSWORD_WRITE_ONLY\nstatic inline uint32_t customCharacteristicCapabilities(void) { return SS2K_CAP_PASSWORD_WRITE_ONLY | SS2K_CAP_SECURE_SETTINGS; }');
+  compat.writeln(
     'typedef enum { ${legacyNames.join(', ')} } CustomCharacteristicValueFormat;\nstatic inline CustomCharacteristicValueFormat customCharacteristicValueFormat(uint8_t id) {\n  switch (id) {',
   );
   for (final c in commands) {
+    if (c['status'] == 'deprecated') continue;
     compat.writeln('    case ${c['id']}: return ${c['legacy_format']};');
   }
   compat.writeln('    default: return CustomUnknown;\n  }\n}\n#endif');
@@ -251,7 +263,13 @@ Map<String, String> render(Map<String, dynamic> s) {
   dart.writeln('}\nconst commands = <int, CommandDescriptor>{');
   for (final c in commands) {
     dart.writeln(
-      '  ${c['id']}: CommandDescriptor(${c['id']}, ${quote(c['name'])}, ${['read_request', 'read_response', 'write_request', 'write_response', 'notification'].map((f) => df(c[f])).join(', ')}, ${c['scale']}, ${quote(c['snapshot_key'])}, ${c['write_completion'] == 'notification'}, ${c['sensitive']}),',
+      '  ${c['id']}: CommandDescriptor(${c['id']}, ${quote(c['name'])}, ${[
+        'read_request',
+        'read_response',
+        'write_request',
+        'write_response',
+        'notification'
+      ].map((f) => df(c[f])).join(', ')}, ${c['scale']}, ${quote(c['snapshot_key'])}, ${c['write_completion'] == 'notification'}, ${c['sensitive']}),',
     );
   }
   dart.writeln('};\nconst appDescriptors = <Map<String, Object?>>[');
@@ -301,9 +319,8 @@ Map<String, String> render(Map<String, dynamic> s) {
     'lib/src/generated.dart': dart.toString(),
     'docs/protocol.md': docs.toString(),
     'pubspec.yaml':
-        '# GENERATED by tool/generate.dart.\nname: ss2k_protocol\ndescription: SmartSpin2k custom characteristic definitions and portable codecs.\nversion: ${s['version']}\nenvironment:\n  sdk: ">=3.3.0 <4.0.0"\n',
-    'library.json':
-        '${const JsonEncoder.withIndent('  ').convert({
+        '# GENERATED by tool/generate.dart.\nname: ss2k_protocol\ndescription: SmartSpin2k custom characteristic definitions and portable codecs.\nversion: ${s['version']}\nenvironment:\n  sdk: ">=3.3.0 <4.0.0"\ndependencies:\n  pointycastle: ^4.0.0\n',
+    'library.json': '${const JsonEncoder.withIndent('  ').convert({
           'name': 'SS2kProtocol',
           'version': s['version'],
           'description': 'Portable SmartSpin2k custom characteristic protocol',
@@ -321,9 +338,8 @@ void main(List<String> args) {
     exitCode = 2;
     return;
   }
-  final s =
-      jsonDecode(File('protocol/ss2k.json').readAsStringSync())
-          as Map<String, dynamic>;
+  final s = jsonDecode(File('protocol/ss2k.json').readAsStringSync())
+      as Map<String, dynamic>;
   final outputs = render(s);
   var stale = false;
   for (final entry in outputs.entries) {

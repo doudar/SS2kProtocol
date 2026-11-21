@@ -2,7 +2,9 @@
 
 One master JSON definition for the SmartSpin2k custom BLE/DirCon characteristic, with a generated reference, an allocation-free **C99 library**, and a **pure Dart package** usable from Flutter.
 
-The initial manifest covers **52 commands**, IDs `0x01`–`0x35` excluding retired `0x33`, using the local firmware and app implementations inspected on November 8, 2026. This is a source-reviewed baseline, not a claim that every released firmware has these capabilities. See [provenance](protocol/provenance.json) for source revisions and working-file hashes.
+Version 0.2 adds physical pairing, encrypted sessions over BLE and DirCon, authenticated firmware streaming, and a portable Dart client. See [the wire protocol and trust model](docs/secure.md). Synchronize with the consumer source directories using the sync_consumers tool; its --check flag detects drift.
+
+The original 0.1 manifest covered **52 commands**, IDs `0x01`–`0x35` excluding retired `0x33`, using the local firmware and app implementations inspected on November 8, 2026. This is a source-reviewed baseline, not a claim that every released firmware has these capabilities. See [provenance](protocol/provenance.json) for source revisions and working-file hashes.
 
 | File | Purpose |
 |---|---|
@@ -15,13 +17,14 @@ The initial manifest covers **52 commands**, IDs `0x01`–`0x35` excluding retir
 
 ## Update the authority
 
-Requires Dart 3.3+; tests additionally require GCC and G++. No Flutter or third-party Dart packages are needed. CI uses Dart 3.12.2, matching the locally tested SDK.
+Requires Dart 3.3+; tests additionally require GCC and G++. Run dart pub get to resolve PointyCastle for the secure client. Secure interoperability tests also require Python and the cryptography package. CI uses Dart 3.12.2, matching the locally tested SDK.
 
 ```sh
 dart tool/generate.dart
 dart tool/generate.dart --check
 dart --suppress-analytics analyze lib tool test examples
 dart test/run.dart
+dart test/secure_test.dart
 ```
 
 Edit `protocol/ss2k.json`, increment its library version, regenerate, and commit the manifest with its generated files. The generator runs schema validation and produces the C definitions/table, optional legacy firmware header, Dart definitions/app descriptors, Markdown reference, and package versions. Generation is deterministic and does not access sibling repositories or the network.
@@ -75,6 +78,6 @@ Use `encodeScalarWrite` for explicit raw integers; `encodeValue` scales engineer
 - App descriptors are presentation metadata, not firmware defaults. Flutter colors/enums, live mutable values and per-device state belong in the app adapter.
 - Host tests cover both codecs and source-format compatibility. BLE/DirCon transport behavior and live firmware integration have not been hardware-tested here.
 
-The companion repositories have not been modified. Publishing this repository and adopting it in both consumers are needed before downstream updates can flow. Inclusion shares definitions at the selected dependency revision; pinned Git dependencies and lockfiles do not silently move when another repository changes. The integration guide supplies explicit and automated consumer-update patterns.
+The app and firmware feature branches consume generated snapshots of this package. Run dart tool/sync_consumers.dart with app ../SS2kConfigApp or firmware ../SmartSpin2k to update them. Both modes accept --check.
 
 Licensed GPL-2.0-only, consistent with the inspected SmartSpin2k and companion app sources. See [LICENSE](LICENSE).
