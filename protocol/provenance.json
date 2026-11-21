@@ -1,0 +1,40 @@
+{
+  "captured_on": "2026-11-08",
+  "basis": "Local working files; may contain uncommitted edits.",
+  "firmware_head": "a05f5b2488340a665cda0e0f35136246d2842504",
+  "app_head": "1d73715bcdcc0927fc8e00ed54fd6fb7a95f2b88",
+  "files": [
+    {
+      "path": "../SmartSpin2k/lib/SS2K/include/CustomCharacteristicProtocol.h",
+      "sha256": "672b278f40ec1e29d7510f196ae49d703eef24114c6eb5b5b236d4d175389c15"
+    },
+    {
+      "path": "../SmartSpin2k/src/BLE_Custom_Characteristic.cpp",
+      "sha256": "cf79d97ad060834829848b5e752e1aaa1cbf9dda7d4ddf0fd471754233bc4b76"
+    },
+    {
+      "path": "../SmartSpin2k/lib/SS2K/include/ScanResultProtocol.h",
+      "sha256": "19686ffd89660bc4bc9fe0fefc276c16931eccd49e156ca59aedb20004099edb"
+    },
+    {
+      "path": "../SmartSpin2k/lib/SS2K/include/VirtualGearing.h",
+      "sha256": "00238066d142fcb98a4a4f397ee70706f41041760773d7c1075f21022e8d66fa"
+    },
+    {
+      "path": "../SmartSpin2k/src/SmartSpin_parameters.cpp",
+      "sha256": "989990c4b96e7cf69e679ae506a9b98528155a5bc481bfc5e31962828f6f49ae"
+    },
+    {
+      "path": "../SmartSpin2k/include/settings.h",
+      "sha256": "f25d0400116b42167bd66ac23eff652a6578ee9a45fc78d0f60502670bb9e066"
+    },
+    {
+      "path": "../SS2kConfigApp/lib/utils/constants.dart",
+      "sha256": "8fb5fcba0bb29f1b8ef86ce6045660ba49e7c1b9e54e1af7f1cabc9e4d88b30e"
+    },
+    {
+      "path": "../SS2kConfigApp/lib/utils/device_data.dart",
+      "sha256": "6a15b25d1a48795aca1b2556f8851fb5b28c54e2d5cd6d06f6dbeefd007d94a0"
+    }
+  ]
+}

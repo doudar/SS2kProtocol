@@ -1,0 +1,33 @@
+name: Protocol checks
+on:
+  push:
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: dart-lang/setup-dart@v1
+        with:
+          sdk: '3.12.2'
+      - run: dart tool/generate.dart --check
+      - run: dart --suppress-analytics analyze lib tool test examples
+      - run: dart test/run.dart
+      - name: Preserve existing wire contracts
+        if: github.event_name == 'pull_request'
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          mkdir -p build
+          if git cat-file -e "$BASE_SHA:protocol/ss2k.json" 2>/dev/null; then
+            git show "$BASE_SHA:protocol/ss2k.json" > build/base.json
+            dart tool/check_compatibility.dart build/base.json
+          fi
+      - name: C undefined behavior and memory checks
+        run: |
+          gcc -std=c99 -g -fsanitize=address,undefined -fno-omit-frame-pointer -I c/include c/src/ss2k_protocol.c test/test_c.c -o build/test_sanitized
+          ./build/test_sanitized

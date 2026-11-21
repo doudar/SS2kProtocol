@@ -1,0 +1,53 @@
+# Install as .github/workflows/update-protocol.yml in a consumer after adding
+# external/SS2kProtocol as a Git submodule. Configure consumer CI separately.
+name: Update shared protocol
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: Published protocol commit, tag, or branch
+        required: true
+        default: main
+  repository_dispatch:
+    types: [ss2k-protocol-release]
+permissions:
+  contents: write
+  pull-requests: write
+concurrency:
+  group: update-ss2k-protocol
+  cancel-in-progress: false
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          # A fine-grained PAT or App token with consumer contents/PR write
+          # and protocol-repo read access. See docs/integration.md.
+          token: ${{ secrets.SS2K_PROTOCOL_UPDATE_TOKEN }}
+      - name: Fetch selected protocol revision
+        env:
+          PROTOCOL_REF: ${{ inputs.ref || github.event.client_payload.ref || 'main' }}
+        run: |
+          git -C external/SS2kProtocol fetch origin -- "$PROTOCOL_REF"
+          git -C external/SS2kProtocol checkout --detach FETCH_HEAD
+      - name: Open dependency update PR
+        env:
+          GH_TOKEN: ${{ secrets.SS2K_PROTOCOL_UPDATE_TOKEN }}
+        run: |
+          if git diff --quiet -- external/SS2kProtocol; then exit 0; fi
+          REVISION=$(git -C external/SS2kProtocol rev-parse HEAD)
+          BRANCH="protocol-update-$REVISION"
+          git switch -c "$BRANCH"
+          git add external/SS2kProtocol
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git commit -m "Update SS2kProtocol to $REVISION"
+          if ! git ls-remote --exit-code --heads origin "$BRANCH" >/dev/null; then
+            git push origin "$BRANCH"
+          fi
+          if [ "$(gh pr list --head "$BRANCH" --json number --jq length)" = 0 ]; then
+            printf 'Update the shared protocol submodule to %s.\n\nRun consumer compilation and integration checks before merging.\n' "$REVISION" > /tmp/protocol-pr-body.txt
+            gh pr create --head "$BRANCH" --title 'Update shared SmartSpin2k protocol' --body-file /tmp/protocol-pr-body.txt
+          fi

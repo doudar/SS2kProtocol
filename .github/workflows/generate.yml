@@ -1,0 +1,33 @@
+name: Regenerate protocol libraries
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ['protocol/ss2k.json', 'protocol/schema.json', 'tool/generate.dart', 'tool/schema_validator.dart']
+permissions:
+  contents: write
+concurrency:
+  group: protocol-generate-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref_name }}
+      - uses: dart-lang/setup-dart@v1
+        with:
+          sdk: '3.12.2'
+      - run: dart tool/generate.dart
+      - run: dart --suppress-analytics analyze lib tool test examples
+      - run: dart test/run.dart
+      - name: Commit generated outputs
+        run: |
+          git add c/include/ss2k_protocol_generated.h c/include/CustomCharacteristicProtocol.h c/src/descriptors.inc lib/src/generated.dart docs/protocol.md pubspec.yaml library.json
+          if ! git diff --cached --quiet; then
+            git config user.name 'github-actions[bot]'
+            git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+            git commit -m 'Regenerate protocol libraries from manifest'
+            git push
+          fi

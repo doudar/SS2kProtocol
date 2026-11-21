@@ -1,0 +1,49 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "SmartSpin2k custom characteristic manifest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "version", "service_uuid", "characteristic_uuid", "operations", "statuses", "byte_order", "reserved_ids", "constants", "transport_notes", "commands"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "version": {"type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"},
+    "service_uuid": {"type": "string"},
+    "characteristic_uuid": {"type": "string"},
+    "operations": {"type": "object", "additionalProperties": false, "required": ["read", "write"], "properties": {"read": {"$ref": "#/$defs/byte"}, "write": {"$ref": "#/$defs/byte"}}},
+    "statuses": {"type": "object", "additionalProperties": false, "required": ["success", "error"], "properties": {"success": {"$ref": "#/$defs/byte"}, "error": {"$ref": "#/$defs/byte"}}},
+    "byte_order": {"const": "little"},
+    "reserved_ids": {"type": "array", "items": {"type": "object", "additionalProperties": false, "required": ["id", "reason"], "properties": {"id": {"$ref": "#/$defs/byte"}, "reason": {"type": "string"}}}},
+    "constants": {"type": "object", "additionalProperties": {"type": "integer"}, "required": ["snapshot_version", "snapshot_header_length", "snapshot_timeout_ms", "scan_version", "scan_header_length", "scan_begin", "scan_device", "scan_end", "power_table_rows", "power_table_columns", "power_table_position_divisor", "power_table_unknown", "gear_max_count", "gear_pair_multiplier", "gear_ratio_scale", "gear_min_ratio", "gear_max_ratio", "gear_max_tooth"]},
+    "transport_notes": {"type": "array", "items": {"type": "string"}},
+    "commands": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/command"}}
+  },
+  "$defs": {
+    "byte": {"type": "integer", "minimum": 0, "maximum": 255},
+    "nullableString": {"type": ["string", "null"]},
+    "format": {"enum": [null, "empty", "bool", "u16", "i16", "i32", "string", "row_index", "power_table", "gear_index", "gear_write", "gear_reply", "snapshot", "scan"]},
+    "command": {
+      "type": "object", "additionalProperties": false,
+      "required": ["id", "name", "legacy_name", "legacy_format", "description", "status", "read_request", "read_response", "write_request", "write_response", "notification", "write_completion", "scale", "unit", "snapshot_key", "sensitive", "notes", "app"],
+      "properties": {
+        "id": {"$ref": "#/$defs/byte"}, "name": {"type": "string"}, "legacy_name": {"type": "string"}, "legacy_format": {"type": "string"},
+        "description": {"type": "string"}, "status": {"enum": ["active", "deprecated"]},
+        "read_request": {"$ref": "#/$defs/format"}, "read_response": {"$ref": "#/$defs/format"},
+        "write_request": {"$ref": "#/$defs/format"}, "write_response": {"$ref": "#/$defs/format"}, "notification": {"$ref": "#/$defs/format"},
+        "write_completion": {"enum": [null, "response", "notification"]},
+        "scale": {"type": "integer", "minimum": 1, "maximum": 65535},
+        "unit": {"$ref": "#/$defs/nullableString"}, "snapshot_key": {"$ref": "#/$defs/nullableString"},
+        "sensitive": {"type": "boolean"}, "notes": {"type": "string"},
+        "app": {
+          "type": ["object", "null"], "additionalProperties": false,
+          "required": ["vName", "isSetting", "settingType", "type", "humanReadableName", "min", "max", "textDescription", "defaultData", "order"],
+          "properties": {
+            "vName": {"type": "string"}, "isSetting": {"type": "boolean"}, "settingType": {"enum": ["basic", "bluetooth", "network", "advanced"]},
+            "type": {"type": "string"}, "humanReadableName": {"type": "string"}, "min": {"type": "number"}, "max": {"type": "number"},
+            "textDescription": {"type": "string"}, "defaultData": {"type": "string"}, "order": {"type": "integer", "minimum": 0},
+            "settingsSnapshotKey": {"type": "string"}
+          }
+        }
+      }
+    }
+  }
+}

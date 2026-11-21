@@ -1,0 +1,6 @@
+cmake_minimum_required(VERSION 3.16)
+project(ss2k_protocol LANGUAGES C)
+add_library(ss2k_protocol STATIC c/src/ss2k_protocol.c)
+target_include_directories(ss2k_protocol PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/c/include)
+target_compile_features(ss2k_protocol PUBLIC c_std_99)
+set_target_properties(ss2k_protocol PROPERTIES C_EXTENSIONS OFF)
