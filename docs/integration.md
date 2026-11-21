@@ -2,21 +2,11 @@
 
 ## Current consumer layout
 
-From the protocol repository root, regenerate, synchronize and verify both consumers:
-
-~~~sh
-dart tool/generate.dart
-dart tool/sync_consumers.dart firmware ../SmartSpin2k
-dart tool/sync_consumers.dart app ../SS2kConfigApp
-dart tool/sync_consumers.dart firmware ../SmartSpin2k --check
-dart tool/sync_consumers.dart app ../SS2kConfigApp --check
-~~~
-
-The firmware compiles the snapshot in lib/SS2kProtocol. The Flutter app uses its in-repository path dependency packages/ss2k_protocol. Each checkout therefore builds independently. The paths passed to the sync tool only identify where to update the two snapshots. The following integration notes also cover alternative Git distribution setups.
+SmartSpin2k resolves SS2kProtocol through PlatformIO `lib_deps`. SS2kConfigApp resolves the Dart package through the Git dependency in `pubspec.yaml`. Both use the public repository root and pin the full commit SHA. The initial direct dependency for both projects is `e83910c13674b01a3104bc86b4b4055862e2d9c2`. The current pins live in the respective consumer manifests. The [README](../README.md) shows both dependency declarations.
 
 ## Firmware
 
-1. Add this repository as a pinned dependency (PlatformIO library, Git submodule, or vendored checkout). Use its `c/include` and compile `c/src/ss2k_protocol.c`.
+1. Add the pinned Git dependency to each PlatformIO environment that uses the protocol, including native tests. The root `library.json` selects `c/include` and `c/src`.
 2. Replace the firmware-owned `lib/SS2K/include/CustomCharacteristicProtocol.h` with the generated dependency header by removing the local duplicate from include resolution. The supplied compatibility header preserves `cc_read`, `cc_write`, `cc_success`, `cc_error`, all `BLE_*` names, and `CustomCharacteristicValueFormat`/`customCharacteristicValueFormat` in C and C++. Do not keep two definitions in the same translation unit.
 3. Replace the custom service/characteristic UUID literals with `SS2K_SERVICE_UUID` and `SS2K_CHARACTERISTIC_UUID`. Replace snapshot/scan constants and power-table protocol dimensions with the generated values, or add compile-time checks against firmware storage dimensions.
 4. Keep firmware setters, command dispatch, event queues, timing, movement limits, save/reboot behavior and transports in firmware. Start with definitions-only adoption to preserve existing validation tolerance. Introduce strict packet validation only after testing older apps, which send extra boolean/action bytes.
@@ -33,7 +23,7 @@ For ESP-IDF, add a component wrapper in the consumer which passes the library's 
 
 ## Companion app
 
-1. Add `ss2k_protocol` as a path dependency during migration, then a Git dependency pinned to a reviewed commit/tag after publication.
+1. Set the Git dependency's `ref` to a reviewed commit in `pubspec.yaml`, run `flutter pub get`, and commit the updated `pubspec.lock`.
 2. Import `package:ss2k_protocol/ss2k_protocol.dart`. Replace custom UUIDs/IDs and scalar serialization with its constants and codecs. Do not use host-endian typed-list reinterpretation for BLE integers.
 3. Replace the protocol portion of `constants.dart` with `createAppDescriptors()`. Convert each descriptor's `settingType` string to the app's existing enum, and retain app-owned display conversions, colors, screens, and mutable state. Snapshot aliases are explicit, including `shifterDir`, `udpLogEnabled`, `hMin`, `hMax`, and `pTab4Pwr`.
 4. Route writes by descriptor: actions use `encodeAction`, ordinary scalars/string/bool use `encodeValue`, explicit wire-unit values use `encodeScalarWrite`, tooth arrays use `encodeGearTeeth`, and each power row uses `encodePowerTableRow`. Logging must use boolean writes despite its legacy UI type being `string`. A groupset UI still coordinates the preset and tooth commands.
@@ -67,15 +57,9 @@ protocol/ss2k.json
     -> firmware/app release
 ```
 
-A local path dependency sees regenerated files immediately on the next build. For reproducible released builds, pin a shared Git commit/tag. Dart's `pubspec.lock` and a Git submodule's recorded commit remain pinned until updated. A floating branch plus a cached lockfile is not automatic propagation.
+To adopt a published change, update the SHA in the firmware and app dependency declarations in their own PRs. For the app, verify that the lockfile's `resolved-ref` matches the new SHA. For firmware, build classic ESP32, ESP32-S3 and native tests against the pinned library. A change to upstream `main` leaves the consumer revisions in place until their maintainers advance them.
 
-Use the same published repository URL in both consumers. For a Git-submodule layout such as `external/SS2kProtocol`, the app can use a path dependency to that submodule and firmware can use the same directory in CMake/PlatformIO. This gives both languages the same revision mechanism.
-
-The supplied [consumer workflow example](../examples/update-protocol.yml) can be installed in each consumer once it adopts this submodule layout. A `repository_dispatch` event or manual workflow run advances the submodule to the chosen ref and opens an update PR. It does not merge or deploy it. Configure consumer CI to compile/test the resulting PR. A master release workflow can dispatch that event to each consumer using a GitHub App token with access to both repositories; the master repository's default token alone cannot write another private repository. Repository URLs, app credentials and release policy must be configured at publication time.
-
-Alternative: retain each ecosystem's own Git dependency and have your existing dependency-update tooling open revision updates. In either layout the JSON is edited once, and consumers compile the generated protocol library instead of maintaining their own ID/type tables.
-
-The example requires `SS2K_PROTOCOL_UPDATE_TOKEN`, a fine-grained token with consumer contents/PR write and protocol repository read access, or an installation token injected by a GitHub App token step. This allows consumer CI to run normally; PRs created with the default token can require workflow approval. See [GitHub's token event rules](https://docs.github.com/en/actions/concepts/security/github_token). Dart Git refs and locked revisions are described in [package dependencies](https://dart.dev/tools/pub/dependencies) and [pub get](https://dart.dev/tools/pub/cmd/pub-get).
+The [example workflow](../examples/update-protocol.yml) is for downstream projects that choose a Git submodule. The SmartSpin2k and SS2kConfigApp dependency declarations above use direct Git dependencies.
 
 ## Adding or changing a command
 

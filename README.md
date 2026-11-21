@@ -2,7 +2,7 @@
 
 One master JSON definition for the SmartSpin2k custom BLE/DirCon characteristic, with a generated reference, an allocation-free **C99 library**, and a **pure Dart package** usable from Flutter.
 
-Version 0.2 adds physical pairing, encrypted sessions over BLE and DirCon, authenticated firmware streaming, and a portable Dart client. See [the wire protocol and trust model](docs/secure.md). Synchronize with the consumer source directories using the sync_consumers tool; its --check flag detects drift.
+Version 0.2 adds physical pairing, encrypted sessions over BLE and DirCon, authenticated firmware streaming, and a portable Dart client. See [the wire protocol and trust model](docs/secure.md).
 
 The original 0.1 manifest covered **52 commands**, IDs `0x01`–`0x35` excluding retired `0x33`, using the local firmware and app implementations inspected on November 8, 2026. This is a source-reviewed baseline, not a claim that every released firmware has these capabilities. See [provenance](protocol/provenance.json) for source revisions and working-file hashes.
 
@@ -35,7 +35,12 @@ The `Regenerate protocol libraries` workflow regenerates and tests artifacts aft
 
 ## C99
 
-Compile `c/src/ss2k_protocol.c` and add `c/include` to include paths, use the root CMake target `ss2k_protocol`, or consume the supplied PlatformIO `library.json`. No Arduino, C++ runtime, platform SDK, heap allocation, or JSON parsing is involved.
+Compile `c/src/ss2k_protocol.c` and add `c/include` to include paths, use the root CMake target `ss2k_protocol`, or consume the supplied PlatformIO `library.json`. PlatformIO reads the generated headers and C source directly from this public repository. Add the reviewed commit to the environment's existing `lib_deps` list.
+
+```ini
+lib_deps =
+    https://github.com/doudar/SS2kProtocol.git#e83910c13674b01a3104bc86b4b4055862e2d9c2
+```
 
 ```c
 #include "ss2k_protocol.h"
@@ -51,12 +56,14 @@ The C API uses raw wire integers and exposes each command's scale. Encoders take
 
 ## Dart / Flutter
 
-The companion app builds from the vendored snapshot in its own checkout:
+Use the public repository as a pinned Git dependency in the companion app's `pubspec.yaml`.
 
 ```yaml
 dependencies:
   ss2k_protocol:
-    path: packages/ss2k_protocol
+    git:
+      url: https://github.com/doudar/SS2kProtocol.git
+      ref: e83910c13674b01a3104bc86b4b4055862e2d9c2
 ```
 
 ```dart
@@ -78,6 +85,6 @@ Use `encodeScalarWrite` for explicit raw integers; `encodeValue` scales engineer
 - App descriptors are presentation metadata, not firmware defaults. Flutter colors/enums, live mutable values and per-device state belong in the app adapter.
 - Host tests cover codecs, cryptographic interoperability and source-format compatibility. The multi-companion DirCon HIL check on a classic ESP32 paired two independent apps, read from both concurrently, revoked one while the other remained live, and confirmed revocation of both.
 
-The app and firmware feature branches consume generated snapshots of this package. Run dart tool/sync_consumers.dart with app ../SS2kConfigApp or firmware ../SmartSpin2k to update them. Both modes accept --check.
+The firmware and companion app each pin a reviewed protocol commit. Update the pins intentionally and test both consumers when changing wire behavior. See [consumer integration](docs/integration.md).
 
 Licensed GPL-2.0-only, consistent with the inspected SmartSpin2k and companion app sources. See [LICENSE](LICENSE).
