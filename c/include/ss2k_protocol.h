@@ -32,6 +32,10 @@ typedef struct {
 const ss2k_descriptor *ss2k_find(uint8_t id);
 /* Canonical request validation, including read-only/action direction checks. */
 ss2k_result ss2k_validate_request(const uint8_t *packet, size_t length);
+/* Only for a negotiated, authenticated DirCon OTA owner after a successful
+ * BEGIN. Validates an unwrapped CHUNK request with 1..2048 image bytes.
+ * The OTA writer checks offset, remaining size and flash status. */
+ss2k_result ss2k_validate_dircon_ota_chunk(const uint8_t *packet, size_t length);
 /* Encoders do not touch output on failure; output length becomes zero. */
 ss2k_result ss2k_encode_request(uint8_t operation, uint8_t id,
   const uint8_t *payload, size_t payload_length, uint8_t *out, size_t capacity, size_t *written);

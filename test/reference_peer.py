@@ -37,14 +37,16 @@ def session(hello, device_id, root):
     server_random = bytes(range(16))
     transcript = hashlib.sha256(device_id + hello + server_random).digest()
     material = derive(root, transcript, b'SS2K/session/v1', 64)
-    header = b'\xd0' + struct.pack('<I', 0)
-    def record(key, prefix, payload):
+    def record(key, prefix, payload, sequence=0):
+        header = b'\xd0' + struct.pack('<I', sequence)
         return header + AESCCM(key,tag_length=8).encrypt(prefix+header[1:], payload, header)
     return dict(challenge=b'\xb1'+server_random+proof(root,b'server',transcript),
                 prove=b'\xb2'+proof(root,b'client',transcript),
                 ready=b'\xb3'+proof(root,b'ready',transcript),
                 request=record(material[:16], material[32:40], b'\x01\x25'),
-                response=record(material[16:32], material[40:48], b'\x80\x25test'))
+                response=record(material[16:32], material[40:48], b'\x80\x25test'),
+                dircon_chunk=record(material[:16], material[32:40],
+                                    b'\x02\x38\x01' + struct.pack('<I', 1024) + bytes(range(256)) * 8, 1))
 
 
 if __name__ == '__main__':

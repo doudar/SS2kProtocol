@@ -283,10 +283,17 @@ class SecureClient {
     return ccm.process(payload);
   }
 
-  Uint8List seal(List<int> inner) {
+  /// Use [dirConOta] only for chunks after an acknowledged BEGIN over DirCon
+  /// with cap_dircon_ota_2k. Write the resulting record as one characteristic value.
+  Uint8List seal(List<int> inner, {bool dirConOta = false}) {
     _expect(_Phase.established);
-    if (inner.length < 2 || inner.length > p.secure_max_inner)
+    if (dirConOta) {
+      if (!p.isDirConOtaChunk(inner)) {
+        throw const FormatException('Invalid extended DirCon OTA chunk');
+      }
+    } else if (inner.length < 2 || inner.length > p.secure_max_inner) {
       throw const FormatException('Invalid inner record length');
+    }
     if (_send > 0xffffffff) {
       close();
       throw StateError('Session counter exhausted');

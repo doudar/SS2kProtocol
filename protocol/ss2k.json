@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "version": "0.2.0",
+  "version": "0.3.0",
   "service_uuid": "77776277-7877-7774-4466-896665500000",
   "characteristic_uuid": "77776277-7877-7774-4466-896665500001",
   "operations": {
@@ -40,6 +40,11 @@
     "capabilities_version": 1,
     "cap_password_write_only": 1,
     "cap_secure_settings": 2,
+    "cap_dircon_ota_2k": 4,
+    "cap_ble_ota_window4": 8,
+    "ble_ota_window": 4,
+    "dircon_ota_chunk_bytes": 2048,
+    "dircon_ota_max_wire": 2068,
     "secure_info": 160,
     "secure_identity": 161,
     "secure_pair": 162,
@@ -1683,7 +1688,7 @@
       "name": "capabilities",
       "legacy_name": "BLE_capabilities",
       "legacy_format": "CustomCapabilities",
-      "description": "Public protocol capabilities. Version byte and LE32 bits. Bit 0 makes WiFi password write-only. Bit 1 requires secure settings and firmware streaming.",
+      "description": "Public protocol capabilities. Version byte and LE32 bits. Bit 0 makes WiFi password write-only. Bit 1 requires secure settings and firmware streaming. Bit 2 permits 2048-byte DirCon OTA chunks. Bit 3 permits a four-chunk BLE OTA window when Write Without Response is available.",
       "status": "active",
       "read_request": "empty",
       "read_response": "capabilities",
@@ -1695,7 +1700,7 @@
       "unit": null,
       "snapshot_key": null,
       "sensitive": false,
-      "notes": "Public protocol capabilities. Version byte and LE32 bits. Bit 0 makes WiFi password write-only. Bit 1 requires secure settings and firmware streaming.",
+      "notes": "Public protocol capabilities. Version byte and LE32 bits. Bit 0 makes WiFi password write-only. Bit 1 requires secure settings and firmware streaming. Bit 2 permits 2048-byte DirCon OTA chunks. Bit 3 permits a four-chunk BLE OTA window when Write Without Response is available.",
       "app": null
     },
     {
@@ -1735,7 +1740,7 @@
       "unit": null,
       "snapshot_key": null,
       "sensitive": false,
-      "notes": "Authenticated application image stream. Begin carries size LE32 and binary SHA256, chunk carries offset LE32 and bytes, finish and abort have no fields. Reply carries the operation and next offset LE32.",
+      "notes": "Authenticated application image stream. Begin carries size LE32 and binary SHA256, chunk carries offset LE32 and bytes, finish and abort have no fields. Reply carries the operation and next offset LE32. Capability bit 2 (0x04) permits the authenticated DirCon transfer owner to send up to 2048 image bytes in one unfragmented encrypted chunk after BEGIN succeeds. BLE, other commands and replies keep the existing record limits. Capability bit 3 (0x08) permits up to four single-value BLE OTA chunks in flight using Write Without Response, each with its own authenticated next-offset acknowledgement.",
       "app": null
     }
   ]

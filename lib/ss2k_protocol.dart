@@ -147,7 +147,22 @@ Uint8List encodeRequest(int operation, int id, [List<int> payload = const []]) {
   return Uint8List.fromList([operation, id, ...payload]);
 }
 
-void validateRequest(List<int> packet) {
+/// Checks the shape and length of a decrypted extended DirCon OTA request.
+bool isDirConOtaChunk(List<int> packet) =>
+    packet.length > 7 &&
+    packet.length <= 7 + dircon_ota_chunk_bytes &&
+    packet[0] == write &&
+    packet[1] == CommandId.firmwareStream &&
+    packet[2] == ota_chunk;
+
+void validateRequest(List<int> packet, {bool dirConOta = false}) {
+  if (dirConOta) {
+    if (!isDirConOtaChunk(packet)) {
+      throw const FormatException('Invalid extended DirCon OTA chunk');
+    }
+    _bytes(packet);
+    return;
+  }
   _bytes(packet);
   if (packet.length < 2) throw const FormatException('Truncated request');
   encodeRequest(packet[0], packet[1], packet.sublist(2));

@@ -52,6 +52,26 @@ int main(int argc, char **argv) {
     assert(ss2k_secure_accept(&state,bytes,2,nested,sizeof(nested),&record,&n)==SS2K_FRAME_INVALID);
     assert(ss2k_secure_accept(&state,NULL,0,head+3,2,&record,&n)==SS2K_FRAME_COMPLETE && record==head+3 && n==2);
   }
+  {
+    uint8_t chunk[7 + SS2K_DIRCON_OTA_CHUNK_BYTES + 1] = {0x02, 0x38, 0x01, 0x00, 0x04};
+    size_t length = sizeof(chunk) - 1;
+    assert(length + SS2K_SECURE_OVERHEAD == SS2K_DIRCON_OTA_MAX_WIRE);
+    assert(ss2k_validate_request(chunk, SS2K_SECURE_MAX_INNER) == SS2K_OK);
+    assert(ss2k_validate_request(chunk, SS2K_SECURE_MAX_INNER + 1) == SS2K_INVALID);
+    assert(ss2k_validate_dircon_ota_chunk(chunk, length) == SS2K_OK);
+    assert(ss2k_validate_dircon_ota_chunk(chunk, length + 1) == SS2K_INVALID);
+    assert(ss2k_validate_dircon_ota_chunk(chunk, 8) == SS2K_OK);
+    assert(ss2k_validate_dircon_ota_chunk(chunk, 7) == SS2K_INVALID);
+    assert(ss2k_validate_dircon_ota_chunk(NULL, length) == SS2K_INVALID);
+    chunk[2] = SS2K_OTA_FINISH;
+    assert(ss2k_validate_dircon_ota_chunk(chunk, length) == SS2K_INVALID);
+    chunk[2] = SS2K_OTA_CHUNK;
+    chunk[0] = SS2K_READ;
+    assert(ss2k_validate_dircon_ota_chunk(chunk, length) == SS2K_INVALID);
+    chunk[0] = SS2K_WRITE;
+    chunk[1] = 0x07;
+    assert(ss2k_validate_dircon_ota_chunk(chunk, length) == SS2K_INVALID);
+  }
   assert(ss2k_find(0x33)==NULL && ss2k_find(0)==NULL && ss2k_find(255)==NULL);
   assert(customCharacteristicValueFormat(BLE_hMin)==CustomSigned32);
   assert(customCharacteristicValueFormat(0x33)==CustomUnknown);
