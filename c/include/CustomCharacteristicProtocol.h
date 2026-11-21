@@ -58,10 +58,15 @@
 #define BLE_scanResults SS2K_ID_SCAN_RESULTS
 #define BLE_gearTeeth SS2K_ID_GEAR_TEETH
 #define BLE_gearPreset SS2K_ID_GEAR_PRESET
-typedef enum { CustomAction, CustomBoolean, CustomUnsigned16, CustomSigned16, CustomSigned32, CustomString, CustomPowerTableRow, CustomSettingsSnapshot, CustomScanResultStream, CustomBooleanWriteStringRead, CustomGearTeeth, CustomUnknown } CustomCharacteristicValueFormat;
+#define BLE_capabilities SS2K_ID_CAPABILITIES
+#define BLE_forgetPeer SS2K_ID_FORGET_PEER
+#define BLE_firmwareStream SS2K_ID_FIRMWARE_STREAM
+#define CUSTOM_CAPABILITIES_VERSION SS2K_CAPABILITIES_VERSION
+#define CUSTOM_CAPABILITY_PASSWORD_WRITE_ONLY SS2K_CAP_PASSWORD_WRITE_ONLY
+static inline uint32_t customCharacteristicCapabilities(void) { return SS2K_CAP_PASSWORD_WRITE_ONLY | SS2K_CAP_SECURE_SETTINGS; }
+typedef enum { CustomAction, CustomBoolean, CustomUnsigned16, CustomSigned16, CustomSigned32, CustomString, CustomPowerTableRow, CustomSettingsSnapshot, CustomScanResultStream, CustomBooleanWriteStringRead, CustomGearTeeth, CustomCapabilities, CustomFirmwareStream, CustomUnknown } CustomCharacteristicValueFormat;
 static inline CustomCharacteristicValueFormat customCharacteristicValueFormat(uint8_t id) {
   switch (id) {
-    case 1: return CustomString;
     case 2: return CustomSigned16;
     case 3: return CustomUnsigned16;
     case 4: return CustomUnsigned16;
@@ -77,7 +82,6 @@ static inline CustomCharacteristicValueFormat customCharacteristicValueFormat(ui
     case 14: return CustomBoolean;
     case 15: return CustomBoolean;
     case 16: return CustomUnsigned16;
-    case 17: return CustomBoolean;
     case 18: return CustomString;
     case 19: return CustomString;
     case 20: return CustomString;
@@ -113,6 +117,9 @@ static inline CustomCharacteristicValueFormat customCharacteristicValueFormat(ui
     case 50: return CustomScanResultStream;
     case 52: return CustomGearTeeth;
     case 53: return CustomUnsigned16;
+    case 54: return CustomCapabilities;
+    case 55: return CustomAction;
+    case 56: return CustomFirmwareStream;
     default: return CustomUnknown;
   }
 }

@@ -71,6 +71,18 @@ bool _pair(int pair) {
 bool _valid(WireFormat f, List<int> p, {bool request = false}) {
   final n = p.length;
   switch (f) {
+    case WireFormat.capabilities:
+      return n == 5 && p[0] == capabilities_version;
+    case WireFormat.ota_request:
+      if (n == 0) return false;
+      return switch (p[0]) {
+        ota_begin => n == 37 && p.sublist(1, 5).any((v) => v != 0),
+        ota_chunk => n > 5 && n <= secure_max_inner - 2,
+        ota_finish || ota_abort => n == 1,
+        _ => false,
+      };
+    case WireFormat.ota_reply:
+      return n == 5 && p[0] <= ota_abort;
     case WireFormat.none:
       return false;
     case WireFormat.empty:

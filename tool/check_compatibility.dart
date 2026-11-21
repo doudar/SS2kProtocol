@@ -13,11 +13,14 @@ List<String> compatibilityIssues(
     'operations',
     'statuses',
     'byte_order',
-    'constants',
   ]) {
     // Canonicalize maps so whitespace and property ordering do not matter.
     if (_canonical(previous[field]) != _canonical(current[field]))
       issues.add('Changed $field');
+  }
+  for (final entry in (previous['constants'] as Map).entries) {
+    if (current['constants'][entry.key] != entry.value)
+      issues.add('Changed constant ${entry.key}');
   }
   final next = {for (final c in current['commands']) c['id']: c};
   final reserved = {for (final r in current['reserved_ids']) r['id']};
@@ -69,9 +72,8 @@ void main(List<String> args) {
   }
   final previous =
       jsonDecode(File(args[0]).readAsStringSync()) as Map<String, dynamic>;
-  final current =
-      jsonDecode(File('protocol/ss2k.json').readAsStringSync())
-          as Map<String, dynamic>;
+  final current = jsonDecode(File('protocol/ss2k.json').readAsStringSync())
+      as Map<String, dynamic>;
   validate(previous);
   validate(current);
   final issues = compatibilityIssues(previous, current);

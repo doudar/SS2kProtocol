@@ -20,7 +20,7 @@
   "$defs": {
     "byte": {"type": "integer", "minimum": 0, "maximum": 255},
     "nullableString": {"type": ["string", "null"]},
-    "format": {"enum": [null, "empty", "bool", "u16", "i16", "i32", "string", "row_index", "power_table", "gear_index", "gear_write", "gear_reply", "snapshot", "scan"]},
+    "format": {"enum": [null, "empty", "bool", "u16", "i16", "i32", "string", "row_index", "power_table", "gear_index", "gear_write", "gear_reply", "snapshot", "scan", "capabilities", "ota_request", "ota_reply"]},
     "command": {
       "type": "object", "additionalProperties": false,
       "required": ["id", "name", "legacy_name", "legacy_format", "description", "status", "read_request", "read_response", "write_request", "write_response", "notification", "write_completion", "scale", "unit", "snapshot_key", "sensitive", "notes", "app"],
@@ -40,7 +40,7 @@
             "vName": {"type": "string"}, "isSetting": {"type": "boolean"}, "settingType": {"enum": ["basic", "bluetooth", "network", "advanced"]},
             "type": {"type": "string"}, "humanReadableName": {"type": "string"}, "min": {"type": "number"}, "max": {"type": "number"},
             "textDescription": {"type": "string"}, "defaultData": {"type": "string"}, "order": {"type": "integer", "minimum": 0},
-            "settingsSnapshotKey": {"type": "string"}
+            "settingsSnapshotKey": {"type": "string"}, "showDescriptionInList": {"type": "boolean"}
           }
         }
       }

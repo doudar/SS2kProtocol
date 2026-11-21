@@ -59,5 +59,17 @@
   {"name":"scan not readable", "kind":"request", "hex":"01 32", "valid":false},
   {"name":"row request", "kind":"request", "hex":"01 27 09", "valid":true},
   {"name":"row out of range", "kind":"request", "hex":"01 27 0a", "valid":false},
-  {"name":"missing row", "kind":"request", "hex":"01 27", "valid":false}
+  {"name":"missing row", "kind":"request", "hex":"01 27", "valid":false},
+  {"name":"public capabilities","kind":"read","hex":"80 36 01 03 00 00 00","valid":true},
+  {"name":"truncated capabilities","kind":"read","hex":"80 36 01 03","valid":false},
+  {"name":"forget this app","kind":"request","hex":"02 37","valid":true},
+  {"name":"forget empty ack","kind":"write","hex":"80 37","valid":true},
+  {"name":"firmware begin","kind":"request","hex":"02 38 00 01 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00","valid":true},
+  {"name":"firmware zero size","kind":"request","hex":"02 38 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00","valid":false},
+  {"name":"firmware chunk","kind":"request","hex":"02 38 01 04 00 00 00 ff","valid":true},
+  {"name":"firmware empty chunk","kind":"request","hex":"02 38 01 04 00 00 00","valid":false},
+  {"name":"firmware finish","kind":"request","hex":"02 38 02","valid":true},
+  {"name":"firmware abort","kind":"request","hex":"02 38 03","valid":true},
+  {"name":"firmware next offset","kind":"write","hex":"80 38 01 07 ac 00 00","valid":true},
+  {"name":"firmware surprise field","kind":"request","hex":"02 38 03 00","valid":false}
 ]

@@ -125,11 +125,7 @@ void main() {
     check(valid == v['valid'], 'Dart vector ${v['name']}');
     final c = run(cExe, [v['kind'], hexString(bytes)]).stdout.toString().trim();
     final expected = v['valid']
-        ? 'valid${v['error'] == true
-              ? ' error'
-              : v.containsKey('raw')
-              ? ' ${v['raw']}'
-              : ''}'
+        ? 'valid${v['error'] == true ? ' error' : v.containsKey('raw') ? ' ${v['raw']}' : ''}'
         : 'invalid';
     check(c == expected, 'C vector ${v['name']}: expected $expected got $c');
     if (v.containsKey('raw'))
@@ -203,17 +199,26 @@ void main() {
     'negative byte',
   );
   check(
-    p
-            .decodeResponse(
-              [128, 10, 1, 0],
-              kind: p.ReplyKind.write,
-              legacyBooleanEcho: true,
-            )
-            .rawValue ==
+    p.decodeResponse(
+          [128, 10, 1, 0],
+          kind: p.ReplyKind.write,
+          legacyBooleanEcho: true,
+        ).rawValue ==
         1,
     'Legacy bool echo',
   );
   final settings = p.createAppDescriptors();
+  final settingsById = {for (final item in settings) item['reference']: item};
+  check(
+      settingsById['0x01']?['isSetting'] == false &&
+          settingsById['0x11']?['defaultData'] == 'true',
+      'Legacy update controls');
+  check(
+      settingsById['0x2E']?['settingsSnapshotKey'] == 'udpLogEnabled' &&
+          settingsById['0x2E']?['showDescriptionInList'] == true,
+      'UDP logging disclosure and snapshot alias');
+  check(
+      settingsById['0x13']?['defaultData'] == '', 'WiFi password starts empty');
   final second = p.createAppDescriptors();
   settings.first['defaultData'] = 'changed';
   check(second.first['defaultData'] != 'changed', 'App state isolation');
@@ -291,9 +296,8 @@ void main() {
   );
   rejects(() => p.ScanFragment.decodeDeviceBody([4, 1]), 'Short UUID');
 
-  final spec =
-      jsonDecode(File('protocol/ss2k.json').readAsStringSync())
-          as Map<String, dynamic>;
+  final spec = jsonDecode(File('protocol/ss2k.json').readAsStringSync())
+      as Map<String, dynamic>;
   Map<String, dynamic> clone() =>
       jsonDecode(jsonEncode(spec)) as Map<String, dynamic>;
   g.validate(spec);
@@ -320,7 +324,7 @@ void main() {
   final added = clone();
   final newCommand = Map<String, dynamic>.from(added['commands'][2]);
   newCommand.addAll({
-    'id': 54,
+    'id': 57,
     'name': 'exampleNewCommand',
     'legacy_name': 'BLE_exampleNewCommand',
     'app': null,

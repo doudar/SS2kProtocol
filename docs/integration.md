@@ -1,5 +1,19 @@
 # Integrating the shared authority
 
+## Current consumer layout
+
+From the protocol repository root, regenerate, synchronize and verify both consumers:
+
+~~~sh
+dart tool/generate.dart
+dart tool/sync_consumers.dart firmware ../SmartSpin2k
+dart tool/sync_consumers.dart app ../SS2kConfigApp
+dart tool/sync_consumers.dart firmware ../SmartSpin2k --check
+dart tool/sync_consumers.dart app ../SS2kConfigApp --check
+~~~
+
+The firmware compiles the snapshot in lib/SS2kProtocol. The Flutter app uses its in-repository path dependency packages/ss2k_protocol. Each checkout therefore builds independently. The paths passed to the sync tool only identify where to update the two snapshots. The following integration notes also cover alternative Git distribution setups.
+
 ## Firmware
 
 1. Add this repository as a pinned dependency (PlatformIO library, Git submodule, or vendored checkout). Use its `c/include` and compile `c/src/ss2k_protocol.c`.
@@ -23,7 +37,7 @@ For ESP-IDF, add a component wrapper in the consumer which passes the library's 
 2. Import `package:ss2k_protocol/ss2k_protocol.dart`. Replace custom UUIDs/IDs and scalar serialization with its constants and codecs. Do not use host-endian typed-list reinterpretation for BLE integers.
 3. Replace the protocol portion of `constants.dart` with `createAppDescriptors()`. Convert each descriptor's `settingType` string to the app's existing enum, and retain app-owned display conversions, colors, screens, and mutable state. Snapshot aliases are explicit, including `shifterDir`, `udpLogEnabled`, `hMin`, `hMax`, and `pTab4Pwr`.
 4. Route writes by descriptor: actions use `encodeAction`, ordinary scalars/string/bool use `encodeValue`, explicit wire-unit values use `encodeScalarWrite`, tooth arrays use `encodeGearTeeth`, and each power row uses `encodePowerTableRow`. Logging must use boolean writes despite its legacy UI type being `string`. A groupset UI still coordinates the preset and tooth commands.
-5. Decode with the pending operation's reply kind. A notification may complete a shifter write; snapshots arriving through DirCon notifications still belong to a read transaction. Only interpret error payloads as errors. Clear assembly and pending operations on disconnect/timeouts.
+5. Decode with the pending operation's reply kind. On legacy devices, a notification may complete a shifter write. Secure v1 uses an explicit shifter acknowledgement; snapshots arriving through DirCon notifications still belong to a read transaction. Only interpret error payloads as errors. Clear assembly and pending operations on disconnect/timeouts.
 6. Use `SnapshotAssembler` or retain the app's existing assembler with generated constants. The shared `ScanFragment` provides framing validation; keep the existing scan-session reassembler while replacing its duplicated numbers.
 7. Run the app's tests, analyzer, BLE and DirCon integration checks. When polling older firmware, preserve the unsupported-command fallback instead of assuming every manifest ID is implemented.
 
@@ -38,7 +52,7 @@ final descriptors = protocol.createAppDescriptors().map((item) {
 }).toList();
 ```
 
-The adapter intentionally preserves legacy app names such as `BLE_homingMin`; protocol IDs and snapshot keys remain authoritative. Duplicate target-watts descriptors were removed from the imported baseline. The obsolete auto-update UI placeholder is now false, consistent with firmware behavior; demo discovered-device data was replaced with an empty array.
+The adapter intentionally preserves legacy app names such as `BLE_homingMin`; protocol IDs and snapshot keys remain authoritative. Duplicate target-watts descriptors were removed from the imported baseline. The retired update fields remain available for old firmware, discovered-device data starts empty, and the password field starts blank.
 
 ## How changes reach both projects
 
