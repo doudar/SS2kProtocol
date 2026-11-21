@@ -47,16 +47,16 @@ ss2k_result result = ss2k_encode_scalar_write(
 /* Check result == SS2K_OK, then send: 02 06 07 01 (26.3 km/h). */
 ```
 
-The C API uses raw wire integers and exposes each command's scale. Encoders take caller-owned buffers and leave them unchanged on failure. Decoders return views into the input buffer; keep that buffer alive while using the view. The 52-entry descriptor table occupies 520 bytes on the tested host ABI, with at most six binary-search iterations. Target flash/stack usage and cycle counts depend on compiler and architecture and have not been measured on ESP32.
+The C API uses raw wire integers and exposes each command's scale. Encoders take caller-owned buffers and leave them unchanged on failure. Decoders return views into the input buffer; keep that buffer alive while using the view. The 55-entry descriptor table occupies 550 bytes on the tested host ABI, with at most six binary-search iterations. Target flash/stack usage and cycle counts depend on compiler and architecture and have not been measured on ESP32.
 
 ## Dart / Flutter
 
-For local adoption, add this package using a path dependency:
+The companion app builds from the vendored snapshot in its own checkout:
 
 ```yaml
 dependencies:
   ss2k_protocol:
-    path: ../SS2kProtocol
+    path: packages/ss2k_protocol
 ```
 
 ```dart
@@ -71,12 +71,12 @@ Use `encodeScalarWrite` for explicit raw integers; `encodeValue` scales engineer
 
 ## Compatibility and limits
 
-- Existing IDs, signedness, little-endian encoding and scaling are preserved. `0x33` is permanently reserved. Manifest versioning does not introduce a new on-wire handshake.
+- Existing IDs, signedness, little-endian encoding and scaling are preserved. `0x33` is permanently reserved. Public capabilities bit 1 selects the secure v1 handshake.
 - Client encoders emit canonical packet lengths and boolean values. Existing firmware accepts some padded/noncanonical requests; `ss2k_validate_request` is deliberately stricter and must not replace the firmware's legacy request handling without a migration decision. A two-byte boolean write echo can be accepted explicitly by response decoders.
 - Integer bounds describe wire representation. Firmware setters still own domain limits and supported preset values. Gear arrays and row indexes receive structural validation to prevent known malformed requests.
 - String payloads use UTF-8 at the Dart API and byte views in C. Embedded NUL is rejected for writes. A device may return non-UTF-8 legacy text; Dart's text accessor reports that as an error.
 - App descriptors are presentation metadata, not firmware defaults. Flutter colors/enums, live mutable values and per-device state belong in the app adapter.
-- Host tests cover both codecs and source-format compatibility. BLE/DirCon transport behavior and live firmware integration have not been hardware-tested here.
+- Host tests cover codecs, cryptographic interoperability and source-format compatibility. The multi-companion DirCon HIL check on a classic ESP32 paired two independent apps, read from both concurrently, revoked one while the other remained live, and confirmed revocation of both.
 
 The app and firmware feature branches consume generated snapshots of this package. Run dart tool/sync_consumers.dart with app ../SS2kConfigApp or firmware ../SmartSpin2k to update them. Both modes accept --check.
 

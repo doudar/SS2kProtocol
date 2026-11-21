@@ -11,7 +11,7 @@ Characteristic: `77776277-7877-7774-4466-896665500001`
 
 - Read means writing a read request to the characteristic; the GATT characteristic exposes WRITE, INDICATE, NOTIFY, not GATT READ.
 
-- Subscribe to indications for command replies and notifications for updates. Serialize requests. ATT write completion is not protocol completion. Shifter writes finish via a later notification. Most successful writes echo the request payload; read back when setters can normalize or ignore values.
+- Legacy BLE: Subscribe to indications for command replies and notifications for updates. Serialize requests. ATT write completion is not protocol completion. Shifter writes finish via a later notification. Most successful writes echo the request payload; read back when setters can normalize or ignore values.
 
 - Canonical booleans are one byte, 0 or 1. Legacy firmware accepts nonzero true and often ignores trailing write bytes (the old app sends two boolean bytes). This library emits canonical packets and accepts legacy boolean write echoes only when requested explicitly.
 
@@ -19,15 +19,15 @@ Characteristic: `77776277-7877-7774-4466-896665500001`
 
 - Errors begin FF <ID>; some legacy paths echo additional request bytes. Do not decode an error payload as a setting. Packets shorter than two bytes can be silently ignored by firmware.
 
-- Normal ATT value capacity is MTU-3. Snapshot chunks and scan events have explicit fragmentation; other large values (including 63-byte power rows, needing MTU >=66) require sufficient MTU or a transport-supported long write. Never invent generic fragmentation.
+- Normal ATT value capacity is MTU-3. In legacy mode, snapshot chunks and scan events have explicit fragmentation; other large values (including 63-byte power rows, needing MTU >=66) require sufficient MTU or a transport-supported long write. Secure v1 uses its bounded record fragments at smaller MTUs.
 
-- DirCon carries identical protocol bytes: first command response in characteristic-write response, updates as notifications. Snapshot remaining chunks follow as notifications; current DirCon snapshot payload is 200 bytes per chunk.
+- Legacy DirCon carries the same custom protocol bytes: first command response in characteristic-write response, updates as notifications. Snapshot remaining chunks follow as notifications; current DirCon snapshot payload is 200 bytes per chunk.
 
 - Snapshot header: status@0, ID@1, version u8@2, chunk u16@3, count u16@5, JSON bytes@7. Count >0, chunk<count. Snapshot transfer blocks other BLE commands and expires after 5000 ms without progress.
 
 - Scan header: status@0, ID@1, version u8@2, event u8@3, scan ID u16@4, sequence u16@6, fragment u8@8, count u8@9, body@10. Count >0, fragment<count. Begin/end carry no body. Device body is [UUID length u8, UUID UTF-8, name UTF-8].
 
-- This manifest version identifies the library, not a newly negotiated on-wire version. Existing IDs, UUIDs and layouts are preserved. Unknown IDs fail locally; older devices can return FF for newer commands.
+- Manifest versions identify the library. The capabilities bit field selects the secure v1 handshake. Existing command IDs, characteristic UUIDs and legacy payload layouts are preserved.
 
 - App metadata contains presentation defaults/ranges from the companion app, not firmware-enforced limits or board-dependent factory defaults. Wire validity and application policy are separate.
 
@@ -241,7 +241,7 @@ Saved HRM. Status: active.
 
 Current Gear. Status: active. Unit: gear/shift.
 
-Write has no immediate response: completion is the later shift notification. Bounded profiles use 1-based gear numbers; Unlimited uses a signed shift count. Secure v1 returns an explicit authenticated write acknowledgement. Unsolicited changes use inner status 0x81.
+In legacy mode the write has no immediate response: completion is the later shift notification. Bounded profiles use 1-based gear numbers; Unlimited uses a signed shift count. Secure v1 returns an explicit authenticated write acknowledgement. Unsolicited changes use inner status 0x81.
 
 ### BLE_saveToLittleFS (`0x18`)
 

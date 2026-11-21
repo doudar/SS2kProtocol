@@ -59,3 +59,6 @@ Firmware streaming uses encrypted `02 38 op fields` only. Begin (0) carries a no
 `dart test/run.dart` checks the C/C++ and Dart codec fixtures. `dart test/secure_test.dart` runs the production Dart client against an independent Python cryptography reference with fresh client keys each time. Install the Python cryptography package before running the latter. The checked-in secure vector is reproducible with the reference peer's public test keys.
 
 `dart tool/secure_bench.dart --help` lists the live bench command options. The runner uses the production Dart SecureClient including reassembly, prints no secrets, retains its test pairing in memory across transports, and supports an authenticated forget at the end. A BLE helper writes READY after subscription, then exchanges one characteristic packet per newline as hex over stdout/stdin. Its stderr is for diagnostics. No button simulation is part of the protocol package.
+
+
+The multi-companion bench command accepts a DirCon host and an expected trainer name. Run dart tool/secure_multi_peer_bench.dart HOST DEVICE_NAME, then provide the two prompted holds. It keeps two independent sockets open, reads the firmware version concurrently, verifies one pairing can be revoked while the other stays usable, and removes both test pairings.
