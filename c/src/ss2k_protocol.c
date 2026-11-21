@@ -120,6 +120,11 @@ ss2k_result ss2k_validate_request(const uint8_t *p, size_t n) {
   if (r != SS2K_OK) return r;
   return valid_payload(f, p + 2, n - 2, 1) ? SS2K_OK : SS2K_INVALID;
 }
+ss2k_result ss2k_validate_dircon_ota_chunk(const uint8_t *p, size_t n) {
+  if (!p || n <= 7 || n > 7 + SS2K_DIRCON_OTA_CHUNK_BYTES) return SS2K_INVALID;
+  return p[0] == SS2K_WRITE && p[1] == SS2K_ID_FIRMWARE_STREAM && p[2] == SS2K_OTA_CHUNK
+      ? SS2K_OK : SS2K_INVALID;
+}
 ss2k_result ss2k_encode_request(uint8_t op, uint8_t id, const uint8_t *p, size_t n,
     uint8_t *out, size_t capacity, size_t *written) {
   ss2k_format f;

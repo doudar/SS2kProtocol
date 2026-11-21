@@ -78,6 +78,28 @@ Future<void> main() async {
   check(hex(client.open(first['response']!)) == '802574657374',
       'Server CCM short record');
   rejects(() => client.open(first['response']!), 'Duplicate accepted');
+  final chunk = [2, 0x38, 1, 0, 4, 0, 0, ...List.generate(2048, (i) => i & 255)];
+  p.validateRequest(chunk, dirConOta: true);
+  p.validateRequest(chunk.sublist(0, 8), dirConOta: true);
+  p.validateRequest(chunk.sublist(0, 512));
+  rejects(() => p.validateRequest(chunk.sublist(0, 513)), 'Legacy chunk bound');
+  rejects(() => client.seal(chunk), 'Generic sealing accepted a large record');
+  for (final invalid in [
+    chunk.sublist(0, 7),
+    [...chunk, 0],
+    [...chunk]..[0] = p.read,
+    [...chunk]..[1] = p.CommandId.deviceName,
+    [...chunk]..[2] = p.ota_finish,
+  ]) {
+    rejects(() => p.validateRequest(invalid, dirConOta: true), 'Invalid extended chunk');
+    rejects(() => client.seal(invalid, dirConOta: true), 'Invalid extended sealing');
+  }
+  final extended = client.seal(chunk, dirConOta: true);
+  check(extended.length == p.dircon_ota_max_wire &&
+      hex(extended) == hex(first['dircon_chunk']!), 'Full-size DirCon CCM vector');
+  rejects(() => secureFragments(extended, 234).toList(), 'Fragmented large record');
+  rejects(() => SecureAssembler().add(extended), 'Large inbound server frame');
+  rejects(() => client.open(extended), 'Large server record');
   final second = await connect();
   check(hex(first['challenge']!) != hex(second['challenge']!),
       'Session freshness');
