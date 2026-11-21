@@ -214,6 +214,12 @@ void main() {
     'Legacy bool echo',
   );
   final settings = p.createAppDescriptors();
+  final settingsById = {for (final item in settings) item['reference']: item};
+  check(settingsById['0x01']?['isSetting'] == false &&
+      settingsById['0x11']?['defaultData'] == 'true', 'Legacy update controls');
+  check(settingsById['0x2E']?['settingsSnapshotKey'] == 'udpLogEnabled' &&
+      settingsById['0x2E']?['showDescriptionInList'] == true, 'UDP logging disclosure and snapshot alias');
+  check(settingsById['0x13']?['defaultData'] == '', 'WiFi password starts empty');
   final second = p.createAppDescriptors();
   settings.first['defaultData'] = 'changed';
   check(second.first['defaultData'] != 'changed', 'App state isolation');

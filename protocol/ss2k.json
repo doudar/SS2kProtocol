@@ -99,7 +99,18 @@
       "snapshot_key": "firmwareUpdateURL",
       "sensitive": false,
       "notes": "Legacy firmware only. Permanently retired on current devices.",
-      "app": null
+      "app": {
+        "vName": "BLE_firmwareUpdateURL",
+        "isSetting": false,
+        "settingType": "network",
+        "type": "string",
+        "humanReadableName": "Firmware Update URL",
+        "min": 0,
+        "max": 0,
+        "textDescription": "URL for firmware updates.",
+        "defaultData": "https://raw.githubusercontent.com/doudar/OTAUpdates/main/",
+        "order": 12
+      }
     },
     {
       "id": 2,
@@ -584,7 +595,18 @@
       "snapshot_key": "autoUpdate",
       "sensitive": false,
       "notes": "Legacy firmware only. Permanently retired on current devices.",
-      "app": null
+      "app": {
+        "vName": "BLE_autoUpdate",
+        "isSetting": false,
+        "settingType": "network",
+        "type": "bool",
+        "humanReadableName": "Auto Updates",
+        "min": 0,
+        "max": 1,
+        "textDescription": "Deprecated compatibility setting. Current firmware always disables automatic updates.",
+        "defaultData": "true",
+        "order": 28
+      }
     },
     {
       "id": 18,
@@ -612,7 +634,7 @@
         "humanReadableName": "WiFi SSID (2.4 Ghz)",
         "min": 0,
         "max": 2000,
-        "textDescription": "Enter the SSID of a 2.4GHz WiFi network to access SmartSpin2k settings over WiFi. If it doesn't connect, it will start and access point with the device name.",
+        "textDescription": "Enter the name of your 2.4 GHz WiFi network to connect to the trainer over WiFi.",
         "defaultData": "SmartSpin2k",
         "order": 29
       }
@@ -644,7 +666,7 @@
         "min": 0,
         "max": 2000,
         "textDescription": "Enter your WiFi password.",
-        "defaultData": "password",
+        "defaultData": "",
         "order": 30
       }
     },
@@ -758,7 +780,7 @@
       "unit": "gear/shift",
       "snapshot_key": null,
       "sensitive": false,
-      "notes": "Write has no immediate response: completion is the later shift notification. Bounded profiles use 1-based gear numbers; Unlimited uses a signed shift count.",
+      "notes": "Write has no immediate response: completion is the later shift notification. Bounded profiles use 1-based gear numbers; Unlimited uses a signed shift count. Secure v1 returns an explicit authenticated write acknowledgement. Unsolicited changes use inner status 0x81.",
       "app": {
         "vName": "BLE_shifterPosition",
         "isSetting": false,
@@ -1478,7 +1500,19 @@
       "snapshot_key": "udpLogEnabled",
       "sensitive": false,
       "notes": "",
-      "app": null
+      "app": {
+        "vName": "BLE_UDPLogging",
+        "isSetting": true,
+        "settingType": "advanced",
+        "type": "bool",
+        "humanReadableName": "Broadcast diagnostic logs over WiFi",
+        "min": 0,
+        "max": 1,
+        "textDescription": "Devices on your local network can receive ride metrics and connection details while this is on.",
+        "showDescriptionInList": true,
+        "defaultData": "false",
+        "order": 49
+      }
     },
     {
       "id": 47,

@@ -23,6 +23,10 @@ List<int> unhex(String value) {
 List<int> u32(int n) => [for (int i = 0; i < 4; i++) (n >>> (i * 8)) & 255];
 const deadline = Duration(seconds: 75);
 
+class PeerDisconnected implements Exception {
+  const PeerDisconnected();
+}
+
 abstract interface class Wire {
   Future<void> send(List<int> wire);
   Future<List<int>> receive();
@@ -58,7 +62,8 @@ class BleWire implements Wire {
 
   @override
   Future<List<int>> receive() async {
-    if (!await events.moveNext()) throw StateError('BLE helper disconnected');
+    if (!await events.moveNext()) throw const PeerDisconnected();
+    if (events.current == 'DISCONNECTED') throw const PeerDisconnected();
     return unhex(events.current);
   }
 
@@ -101,7 +106,7 @@ class DirWire implements Wire {
   Future<List<int>> nextFrame() async {
     while (
         buffer.length < 6 || buffer.length < 6 + 256 * buffer[4] + buffer[5]) {
-      if (!await events.moveNext()) throw StateError('DirCon disconnected');
+      if (!await events.moveNext()) throw const PeerDisconnected();
       buffer.addAll(events.current);
     }
     final size = 6 + 256 * buffer[4] + buffer[5],
@@ -219,16 +224,49 @@ class Bench {
     }
   }
 
-  Future<void> version() async {
+  Future<String> version() async {
     final reply = await command(p.encodeRead(p.CommandId.firmwareVer));
-    stdout.writeln(
-        'Authenticated firmware version ${utf8.decode(reply.sublist(2))}');
+    final version = utf8.decode(reply.sublist(2));
+    stdout.writeln('Authenticated firmware version $version');
+    return version;
   }
 
-  Future<void> ota(String path) async {
+  /// A fresh TCP connection or a BLE reconnection can precede a delayed
+  /// reboot. Observe loss of the old live connection before accepting a boot.
+  Future<void> observeReboot() async {
+    Future<void> untilPeerCloses() async {
+      try {
+        while (true) {
+          await wire.receive();
+        }
+      } on PeerDisconnected {
+        return;
+      } on SocketException {
+        return;
+      }
+    }
+
+    await untilPeerCloses().timeout(const Duration(seconds: 20),
+        onTimeout: () => throw StateError(
+            'Finished image, but the old connection did not disconnect'));
+    stdout.writeln('Observed firmware reboot disconnect.');
+  }
+
+  Future<void> ota(String path, String oldVersion, String? expected) async {
     final image = await File(path).readAsBytes();
     if (image.isEmpty || image.length > 0xffffffff)
       throw ArgumentError('Invalid image size');
+    final digest = SHA256Digest().process(image);
+    stdout.writeln('Streaming image SHA-256 ${hex(digest)}');
+    if (expected != null) {
+      if (expected.isEmpty || expected == oldVersion)
+        throw ArgumentError(
+            'Expected post-update version must differ from the current build');
+      // Firmware uses a NUL-terminated FIRMWARE_VERSION literal in the image.
+      if (!latin1.decode(image).contains('$expected\x00'))
+        throw ArgumentError(
+            'Expected version string absent from candidate image');
+    }
     Future<void> op(int n, List<int> body, int offset) async {
       final reply = await command(
           p.encodeRequest(p.write, p.CommandId.firmwareStream, [n, ...body]));
@@ -238,8 +276,7 @@ class Bench {
         throw StateError('Unexpected firmware stream acknowledgement');
     }
 
-    await op(p.ota_begin,
-        [...u32(image.length), ...SHA256Digest().process(image)], 0);
+    await op(p.ota_begin, [...u32(image.length), ...digest], 0);
     // At minimum ATT capacity the initial OTA request already needs fragments;
     // transmit a full bounded plaintext record instead of one byte per ACK.
     final room = mtu <= p.secure_overhead + 7
@@ -269,7 +306,7 @@ Future<void> main(List<String> args) async {
   final host = opt('--host'), helper = opt('--ble-helper');
   if (args.contains('--help') || (host == null && helper == null)) {
     stdout.writeln(
-        'dart tool/secure_bench.dart [--host HOST] [--ble-helper PATH --python EXE] [--ble-wire BYTES] [--ota-ble APP.bin] [--ota-dircon APP.bin] [--forget]');
+        'dart tool/secure_bench.dart [--host HOST] [--ble-helper PATH --python EXE] [--ble-wire BYTES] [--ota-ble APP.bin --expect-ble VERSION] [--ota-dircon APP.bin --expect-dircon VERSION] [--forget]');
     stdout.writeln(
         'Pairs on BLE first when both transports are supplied, reconnects on each, then optionally updates and forgets the test peer.');
     return;
@@ -310,34 +347,42 @@ Future<void> main(List<String> args) async {
     await Future<void>.delayed(const Duration(seconds: 1));
     bench = await connect();
     final path = opt('--ota-$transport');
+    final expected = opt('--expect-$transport');
     try {
       await bench.resume(root);
-      await bench.version();
-      if (path != null) await bench.ota(path);
+      final oldVersion = await bench.version();
+      if (path != null) {
+        await bench.ota(path, oldVersion, expected);
+        await bench.observeReboot();
+      }
     } finally {
       bench.client.close();
       await bench.wire.close();
     }
     if (path != null) {
-      Bench? restarted;
       Object? last;
-      for (int i = 0; i < 10 && restarted == null; i++) {
+      var ready = false;
+      for (int i = 0; i < 12 && !ready; i++) {
         await Future<void>.delayed(const Duration(seconds: 3));
+        Bench? restarted;
         try {
           restarted = await connect();
+          await restarted.resume(root);
+          final actual = await restarted.version();
+          if (expected != null && actual != expected)
+            throw StateError('Booted $actual, expected $expected');
+          ready = true;
         } catch (e) {
           last = e;
+        } finally {
+          if (restarted != null) {
+            restarted.client.close();
+            await restarted.wire.close();
+          }
         }
       }
-      if (restarted == null)
-        throw StateError('Post-update connection failed: $last');
-      try {
-        await restarted.resume(root);
-        await restarted.version();
-      } finally {
-        restarted.client.close();
-        await restarted.wire.close();
-      }
+      if (!ready)
+        throw StateError('Failed to verify the restarted image: $last');
     }
     if (transport == transports.last && args.contains('--forget')) {
       bench = await connect();

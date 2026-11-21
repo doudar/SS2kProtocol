@@ -241,7 +241,7 @@ Saved HRM. Status: active.
 
 Current Gear. Status: active. Unit: gear/shift.
 
-Write has no immediate response: completion is the later shift notification. Bounded profiles use 1-based gear numbers; Unlimited uses a signed shift count.
+Write has no immediate response: completion is the later shift notification. Bounded profiles use 1-based gear numbers; Unlimited uses a signed shift count. Secure v1 returns an explicit authenticated write acknowledgement. Unsolicited changes use inner status 0x81.
 
 ### BLE_saveToLittleFS (`0x18`)
 

@@ -40,7 +40,7 @@
             "vName": {"type": "string"}, "isSetting": {"type": "boolean"}, "settingType": {"enum": ["basic", "bluetooth", "network", "advanced"]},
             "type": {"type": "string"}, "humanReadableName": {"type": "string"}, "min": {"type": "number"}, "max": {"type": "number"},
             "textDescription": {"type": "string"}, "defaultData": {"type": "string"}, "order": {"type": "integer", "minimum": 0},
-            "settingsSnapshotKey": {"type": "string"}
+            "settingsSnapshotKey": {"type": "string"}, "showDescriptionInList": {"type": "boolean"}
           }
         }
       }
